@@ -166,17 +166,9 @@ int main(void)
 		printf("Sending package...\r\n");
 
 		message_length = sprintf(buffer, "I say HI and Hello %d", message);
-		ret = LoRa_beginPacket(&SX1278, 0);HAL_Delay(200);
-		ret = LoRa_write_b(&SX1278, (uint8_t *) buffer, message_length);HAL_Delay(200);
-		//printf("1.mainc RegFIFO = %s\r\n", LoRa_readRegister(&SX1278, RegFIFO));
-
-		HAL_GPIO_WritePin(SX1278.hw->dio0.port, SX1278.hw->dio0.pin, GPIO_PIN_SET);
-		HAL_Delay(200);
-		HAL_GPIO_WritePin(SX1278.hw->dio0.port, SX1278.hw->dio0.pin, GPIO_PIN_RESET);
-
-		LoRa_endPacket(&SX1278, false);HAL_Delay(200);
-
-
+		ret = LoRa_beginPacket(&SX1278, 0);
+		ret = LoRa_write_b(&SX1278, (uint8_t *) buffer, message_length);
+		LoRa_endPacket(&SX1278, false);
 
 		message += 1;
 
