@@ -27,36 +27,26 @@
 #include "gpio.h"
 #include "stdint.h"
 
-/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 #include <stdio.h>
+#include "SX1278.h"
 
 /* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+/* Private variables ---------------------------------------------------------*/
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+
 /* USER CODE BEGIN PFP */
+/* Private function prototypes -----------------------------------------------*/
+
 int _write(int file, char *ptr, int len) {
 	HAL_UART_Transmit(&huart1, (uintptr_t) ptr, len, 50);  // uintptr_t  uint8_t
 	return len;
@@ -64,7 +54,6 @@ int _write(int file, char *ptr, int len) {
 
 /* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 SX1278_hw_t SX1278_hw;
@@ -72,61 +61,46 @@ SX1278_t SX1278;
 
 int master;
 int ret;
-char buffer[100];
+
+char buffer[64];
+
 int message;
 int message_length;
 
 /* USER CODE END 0 */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
+int main(void) {
 
-  /* USER CODE END 1 */
-  
+	/* USER CODE BEGIN 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* USER CODE END 1 */
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* MCU Configuration----------------------------------------------------------*/
 
-  /* USER CODE BEGIN Init */
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE END Init */
+	/* USER CODE BEGIN Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* USER CODE END Init */
 
-  /* USER CODE BEGIN SysInit */
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE END SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_SPI1_Init();
-  MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
+	/* USER CODE END SysInit */
 
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_SPI1_Init();
+
+	/* USER CODE BEGIN 2 */
 	master = 1;
 	printf("Mode: Master\r\n");
+	//HAL_GPIO_WritePin(MODE_GPIO_Port, MODE_Pin, GPIO_PIN_RESET);
 
 	//initialize LoRa module
-	/*
-	 LED_GPIO_Port GPIOA
-	 LED_Pin GPIO_PIN_0     LED=PA0
-	 NSS_GPIO_Port GPIOA
-	 NSS_Pin GPIO_PIN_4     NSS=PA4
-	 DIO0_GPIO_Port GPIOA
-	 DIO0_Pin GPIO_PIN_10   DIO0=PA10
-	 RESET_GPIO_Port GPIOA
-	 RESET_Pin GPIO_PIN_9   RESET =PA9
-	 MODE_GPIO_Port GPIOB            // I have no mode pin
-	 MODE_Pin GPIO_PIN_1    MODE=PB1 // I have no mode pin
-	 */
 	SX1278_hw.dio0.port = DIO0_GPIO_Port;
 	SX1278_hw.dio0.pin = DIO0_Pin;
 	SX1278_hw.nss.port = NSS_GPIO_Port;
@@ -137,49 +111,41 @@ int main(void)
 
 	SX1278.hw = &SX1278_hw;
 
-
-	//SX1278_setSyncWord(&SX1278, 0x12);
-
 	printf("Configuring LoRa module\r\n");
-	// SX1278_begin(&SX1278, SX1278_433MHZ, SX1278_POWER_20DBM, SX1278_LORA_SF_7,
-	//      SX1278_LORA_BW_125KHZ, 2);
-	//SX1278_begin(&SX1278, 433E6, SX1278_POWER_17DBM, SX1278_LORA_SF_7,
-	//	   SX1278_LORA_BW_125KHZ, 28);
-	// SX1278_LORA_BW_62_5KHZ = 6. Arduino: long Bandwidth = 62.5E3;
-	// bw=20.8kHz=3. Arduino: long Bandwidth = 20.8E3;
-	// packetLength = 10
-
+	SX1278_begin(&SX1278, SX1278_433MHZ, SX1278_POWER_20DBM, SX1278_LORA_SF_7,
+	SX1278_LORA_BW_125KHZ, 8);
 	printf("Done configuring LoRaModule\r\n");
 
-	ret = LoRa_begin(&SX1278, 433E6);
+	ret = SX1278_LoRaEntryTx(&SX1278, 16, 2000);
 
+	/* USER CODE END 2 */
 
-
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1) {
 		printf("Master ...\r\n");
-		HAL_Delay(2500);
+		HAL_Delay(10000); // 10 Seconds
 		printf("Sending package...\r\n");
 
-		message_length = sprintf(buffer, "I say HI and Hello %d", message);
-		ret = LoRa_beginPacket(&SX1278, 0);
-		ret = LoRa_write_b(&SX1278, (uint8_t *) buffer, message_length);
-		LoRa_endPacket(&SX1278, false);
+		message_length = sprintf(buffer, "Hello %d", message);
+		ret = SX1278_LoRaEntryTx(&SX1278, message_length, 2000);
+		printf("Entry: %d\r\n", ret);
 
+		printf("Sending %s\r\n", buffer);
+		ret = SX1278_LoRaTxPacket(&SX1278, (uint8_t *) buffer, message_length,
+				2000);
 		message += 1;
 
 		printf("Transmission: %d\r\n", ret);
-		printf("Package %i sent...\r\n", message);
+		printf("Package sent...\r\n");
 
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
+
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
+
 }
 
 /**
@@ -192,7 +158,7 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -202,7 +168,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
@@ -247,7 +213,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(char *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
 	/* User can add his own implementation to report the file name and line number,
 	 tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
